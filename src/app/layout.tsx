@@ -5,6 +5,7 @@ import { Providers } from '@/components/Providers';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { GoogleAnalytics } from '@/components/GoogleAnalytics';
+import { TermsConsentModal } from '@/components/TermsConsentModal';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -40,6 +41,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <GoogleAnalytics />
         <Providers>
+          <TermsConsentModal />
           <Navbar />
           <main className="min-h-screen pt-16">
             {children}
