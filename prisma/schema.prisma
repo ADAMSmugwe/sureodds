@@ -1,0 +1,85 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ResultStatus {
+  PENDING
+  WON
+  LOST
+  VOID
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  phone         String?        // For M-Pesa pre-fill
+  password      String
+  name          String?
+  role          Role           @default(USER)
+  subscriptions Subscription[]
+  transactions  Transaction[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Prediction {
+  id        String       @id @default(cuid())
+  matchName String       // e.g., "Arsenal vs Liverpool"
+  homeTeam  String
+  awayTeam  String
+  league    String
+  kickOff   DateTime
+  tip       String       // e.g., "Away Win & Over 1.5"
+  odds      Float
+  isPremium Boolean      @default(false)
+  status    ResultStatus @default(PENDING)
+  analysis  String?      // Why this pick? Builds trust
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startDate DateTime @default(now())
+  endDate   DateTime
+  planType  String   // DAILY, WEEKLY, MONTHLY
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([endDate])
+}
+
+model Transaction {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  merchantRequestID String   @unique // From M-Pesa STK Push response
+  checkoutRequestID String   @unique // From M-Pesa STK Push response
+  amount            Float
+  phone             String   // Phone number used for payment
+  planType          String   // What they're paying for
+  status            String   @default("PENDING") // PENDING, SUCCESS, FAILED
+  mpesaReceipt      String?  // Receipt number after successful payment
+  resultDesc        String?  // Description from M-Pesa callback
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
