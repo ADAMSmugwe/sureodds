@@ -4,6 +4,7 @@ import './globals.css';
 import { Providers } from '@/components/Providers';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { GoogleAnalytics } from '@/components/GoogleAnalytics';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -37,6 +38,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
+        <GoogleAnalytics />
         <Providers>
           <Navbar />
           <main className="min-h-screen pt-16">
