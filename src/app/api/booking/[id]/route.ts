@@ -56,15 +56,15 @@ export async function PATCH(
       );
     }
 
-    // Prepare update data
+    // Prepare update data with proper enum type
     const updateData: {
-      status: string;
+      status: 'PENDING' | 'CONTACTED' | 'CONVERTED' | 'CANCELLED';
       notes?: string;
       activatedAt?: Date;
       expiresAt?: Date;
       reminderSent?: boolean;
     } = {
-      status,
+      status: status as 'PENDING' | 'CONTACTED' | 'CONVERTED' | 'CANCELLED',
       ...(notes !== undefined && { notes }),
     };
 
