@@ -20,27 +20,21 @@ function LoginForm() {
     setError('');
     setLoading(true);
 
-    try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
-      });
+    // First validate credentials without redirect
+    const result = await signIn('credentials', {
+      email,
+      password,
+      redirect: false,
+    });
 
-      if (result?.error) {
-        setError(result.error);
-        setLoading(false);
-      } else if (result?.ok) {
-        // Successful login - redirect immediately
-        // Use window.location for a full page refresh to ensure session is loaded
-        window.location.href = callbackUrl;
-        // Keep loading state true during redirect
-        return;
-      }
-    } catch (err) {
-      setError('An error occurred. Please try again.');
+    if (result?.error) {
+      setError(result.error);
       setLoading(false);
+      return;
     }
+
+    // Credentials valid - now do a hard redirect
+    window.location.replace(callbackUrl);
   };
 
   return (
