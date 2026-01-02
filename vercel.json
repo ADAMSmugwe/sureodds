@@ -1,15 +1,9 @@
 {
   "buildCommand": "npx prisma generate && next build",
   "framework": "nextjs",
-  "crons": [
-    {
-      "path": "/api/cron/reminders?secret=sureodds-cron-2024",
-      "schedule": "0 8 * * *"
-    }
-  ],
   "headers": [
     {
-      "source": "/api/mpesa/callback",
+      "source": "/api/booking",
       "headers": [
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "POST, OPTIONS" }
