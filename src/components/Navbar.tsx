@@ -28,10 +28,14 @@ export function Navbar() {
         }
       };
 
-      fetchPendingCount();
-      // Poll every 30 seconds for new bookings
-      const interval = setInterval(fetchPendingCount, 30000);
-      return () => clearInterval(interval);
+      // Delay initial fetch to not block page load
+      const timeout = setTimeout(fetchPendingCount, 2000);
+      // Poll every 60 seconds for new bookings (reduced from 30s)
+      const interval = setInterval(fetchPendingCount, 60000);
+      return () => {
+        clearTimeout(timeout);
+        clearInterval(interval);
+      };
     }
   }, [isAdmin]);
 
