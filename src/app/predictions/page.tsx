@@ -2,6 +2,9 @@ import Link from 'next/link';
 import prisma from '@/lib/prisma';
 import { PredictionCard } from '@/components/PredictionCard';
 
+// Force dynamic rendering - database queries require runtime
+export const dynamic = 'force-dynamic';
+
 async function getPredictions() {
   return prisma.prediction.findMany({
     orderBy: { kickOff: 'desc' },

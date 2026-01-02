@@ -3,6 +3,9 @@ import { Trophy, TrendingUp, Shield, Zap, CheckCircle, XCircle } from 'lucide-re
 import prisma from '@/lib/prisma';
 import { unstable_cache } from 'next/cache';
 
+// Force dynamic rendering - database queries require runtime
+export const dynamic = 'force-dynamic';
+
 // Cache stats for 5 minutes - reduces DB calls significantly
 const getCachedStats = unstable_cache(
   async () => {
