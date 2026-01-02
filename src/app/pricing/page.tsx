@@ -1,16 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Check, Crown, Zap, Shield } from 'lucide-react';
-import { PaymentModal } from '@/components/PaymentModal';
+import { Check, Crown, Zap, Shield, Loader2 } from 'lucide-react';
+import { BookingModal } from '@/components/BookingModal';
 
-const plans = [
+interface Prices {
+  daily: number;
+  weekly: number;
+  monthly: number;
+}
+
+const getPlans = (prices: Prices) => [
   {
     id: 'DAILY',
     name: 'Daily',
-    price: 50,
+    price: prices.daily,
     period: 'day',
     description: 'Perfect for testing the waters',
     features: [
@@ -23,7 +29,7 @@ const plans = [
   {
     id: 'WEEKLY',
     name: 'Weekly',
-    price: 250,
+    price: prices.weekly,
     period: 'week',
     description: 'Most popular choice',
     features: [
@@ -38,7 +44,7 @@ const plans = [
   {
     id: 'MONTHLY',
     name: 'Monthly',
-    price: 800,
+    price: prices.monthly,
     period: 'month',
     description: 'Best value for serious bettors',
     features: [
@@ -59,17 +65,31 @@ export default function PricingPage() {
     type: 'DAILY' | 'WEEKLY' | 'MONTHLY';
     amount: number;
   } | null>(null);
+  const [prices, setPrices] = useState<Prices>({ daily: 50, weekly: 250, monthly: 800 });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPrices = async () => {
+      try {
+        const response = await fetch('/api/settings');
+        if (response.ok) {
+          const data = await response.json();
+          setPrices(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch prices:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPrices();
+  }, []);
+
+  const plans = getPlans(prices);
 
   const handleSelectPlan = (planId: string, price: number) => {
-    if (status === 'unauthenticated') {
-      router.push('/login?callbackUrl=/pricing');
-      return;
-    }
-
-    if (session?.user?.hasActiveSubscription) {
-      return;
-    }
-
+    // For booking flow, we don't require authentication
+    // This allows lead generation from all visitors
     setSelectedPlan({
       type: planId as 'DAILY' | 'WEEKLY' | 'MONTHLY',
       amount: price,
@@ -85,7 +105,7 @@ export default function PricingPage() {
             Choose Your VIP Plan
           </h1>
           <p className="text-xl text-slate-400 max-w-2xl mx-auto">
-            Get access to all premium predictions. Pay securely via M-Pesa.
+            Get access to all premium predictions. Book now and we&apos;ll contact you to complete your subscription.
           </p>
           
           {session?.user?.hasActiveSubscription && (
@@ -96,6 +116,13 @@ export default function PricingPage() {
           )}
         </div>
 
+        {/* Loading State */}
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+          </div>
+        ) : (
+        <>
         {/* Plans Grid */}
         <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
           {plans.map((plan) => {
@@ -150,7 +177,7 @@ export default function PricingPage() {
                       : 'bg-slate-800 hover:bg-slate-700 text-white'
                   } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  {isDisabled ? 'Already Subscribed' : 'Get Started'}
+                  {isDisabled ? 'Already Subscribed' : 'Book These Odds'}
                 </button>
               </div>
             );
@@ -159,21 +186,28 @@ export default function PricingPage() {
 
         {/* Trust badges */}
         <div className="mt-16 text-center">
-          <p className="text-slate-400 mb-4">Secure payment via</p>
-          <div className="inline-flex items-center gap-2 px-6 py-3 bg-dark-100 rounded-full border border-slate-800">
-            <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-              M
+          <p className="text-slate-400 mb-4">How it works</p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <div className="px-6 py-3 bg-dark-100 rounded-full border border-slate-800">
+              <span className="text-white">1. Book your package</span>
             </div>
-            <span className="text-white font-semibold">M-Pesa</span>
+            <div className="px-6 py-3 bg-dark-100 rounded-full border border-slate-800">
+              <span className="text-white">2. We&apos;ll contact you</span>
+            </div>
+            <div className="px-6 py-3 bg-dark-100 rounded-full border border-slate-800">
+              <span className="text-white">3. Get VIP access</span>
+            </div>
           </div>
         </div>
+        </>
+        )}
       </div>
 
-      {/* Payment Modal */}
+      {/* Booking Modal */}
       {selectedPlan && (
-        <PaymentModal
-          planType={selectedPlan.type}
-          amount={selectedPlan.amount}
+        <BookingModal
+          packageName={selectedPlan.type}
+          packagePrice={selectedPlan.amount}
           onClose={() => setSelectedPlan(null)}
         />
       )}

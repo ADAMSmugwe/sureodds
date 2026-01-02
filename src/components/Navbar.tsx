@@ -2,12 +2,38 @@
 
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
-import { useState } from 'react';
-import { Menu, X, Crown, LogOut, User } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Menu, X, Crown, LogOut, User, Bell, Shield } from 'lucide-react';
 
 export function Navbar() {
   const { data: session, status } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [pendingBookings, setPendingBookings] = useState(0);
+
+  // Check if user is truly an admin
+  const isAdmin = session?.user?.role === 'ADMIN';
+
+  // Fetch pending bookings count for admin only
+  useEffect(() => {
+    if (isAdmin) {
+      const fetchPendingCount = async () => {
+        try {
+          const res = await fetch('/api/booking?status=PENDING');
+          if (res.ok) {
+            const data = await res.json();
+            setPendingBookings(data.bookings?.length || 0);
+          }
+        } catch (error) {
+          // Silently fail - user might not be admin
+        }
+      };
+
+      fetchPendingCount();
+      // Poll every 30 seconds for new bookings
+      const interval = setInterval(fetchPendingCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isAdmin]);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-dark-200/80 backdrop-blur-md border-b border-slate-800">
@@ -42,13 +68,35 @@ export function Navbar() {
                   </span>
                 )}
                 
-                {session.user.role === 'ADMIN' && (
-                  <Link 
-                    href="/admin" 
-                    className="text-primary-400 hover:text-primary-300 transition"
-                  >
-                    Admin
-                  </Link>
+                {/* Admin Panel - Only visible to admins */}
+                {isAdmin && (
+                  <div className="flex items-center gap-2 pl-4 border-l border-slate-700">
+                    <Shield size={16} className="text-orange-500" />
+                    <Link 
+                      href="/admin/bookings" 
+                      className="relative px-3 py-1 bg-orange-500/10 border border-orange-500/30 rounded-lg text-orange-400 hover:bg-orange-500/20 transition flex items-center gap-2"
+                    >
+                      <Bell size={16} />
+                      <span>Bookings</span>
+                      {pendingBookings > 0 && (
+                        <span className="w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse">
+                          {pendingBookings}
+                        </span>
+                      )}
+                    </Link>
+                    <Link 
+                      href="/admin/settings" 
+                      className="px-3 py-1 bg-orange-500/10 border border-orange-500/30 rounded-lg text-orange-400 hover:bg-orange-500/20 transition"
+                    >
+                      Settings
+                    </Link>
+                    <Link 
+                      href="/admin" 
+                      className="px-3 py-1 bg-orange-500/10 border border-orange-500/30 rounded-lg text-orange-400 hover:bg-orange-500/20 transition"
+                    >
+                      Panel
+                    </Link>
+                  </div>
                 )}
                 
                 <Link href="/dashboard" className="text-slate-300 hover:text-white transition">
@@ -125,15 +173,44 @@ export function Navbar() {
                 >
                   Dashboard
                 </Link>
-                {session.user.role === 'ADMIN' && (
-                  <Link 
-                    href="/admin" 
-                    className="block text-primary-400"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Admin Panel
-                  </Link>
+                
+                {/* Admin Section - Mobile */}
+                {isAdmin && (
+                  <div className="pt-4 mt-4 border-t border-slate-700">
+                    <div className="flex items-center gap-2 text-orange-500 mb-3">
+                      <Shield size={16} />
+                      <span className="font-semibold">Admin Panel</span>
+                    </div>
+                    <Link 
+                      href="/admin/bookings" 
+                      className="flex items-center gap-2 px-3 py-2 bg-orange-500/10 border border-orange-500/30 rounded-lg text-orange-400 mb-2"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <Bell size={16} />
+                      <span>Bookings</span>
+                      {pendingBookings > 0 && (
+                        <span className="w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                          {pendingBookings}
+                        </span>
+                      )}
+                    </Link>
+                    <Link 
+                      href="/admin/settings" 
+                      className="block px-3 py-2 bg-orange-500/10 border border-orange-500/30 rounded-lg text-orange-400 mb-2"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Settings
+                    </Link>
+                    <Link 
+                      href="/admin" 
+                      className="block px-3 py-2 bg-orange-500/10 border border-orange-500/30 rounded-lg text-orange-400"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Predictions Panel
+                    </Link>
+                  </div>
                 )}
+                
                 <button
                   onClick={() => signOut({ callbackUrl: '/' })}
                   className="flex items-center gap-2 text-slate-400"
