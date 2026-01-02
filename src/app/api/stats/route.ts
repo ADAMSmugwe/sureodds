@@ -6,6 +6,9 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
+// Force dynamic - requires database at runtime
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     // Get predictions stats
