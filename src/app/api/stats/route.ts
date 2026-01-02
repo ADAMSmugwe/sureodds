@@ -6,8 +6,10 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-// Force dynamic - requires database at runtime
+// Force dynamic rendering - this route uses database
 export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+export const revalidate = 0;
 
 export async function GET() {
   try {
