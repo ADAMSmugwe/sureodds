@@ -29,13 +29,16 @@ function LoginForm() {
 
       if (result?.error) {
         setError(result.error);
-      } else {
-        router.push(callbackUrl);
-        router.refresh();
+        setLoading(false);
+      } else if (result?.ok) {
+        // Successful login - redirect immediately
+        // Use window.location for a full page refresh to ensure session is loaded
+        window.location.href = callbackUrl;
+        // Keep loading state true during redirect
+        return;
       }
     } catch (err) {
       setError('An error occurred. Please try again.');
-    } finally {
       setLoading(false);
     }
   };
