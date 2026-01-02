@@ -2,6 +2,7 @@ import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { compare } from 'bcryptjs';
 import prisma from '@/lib/prisma';
+import { sendWelcomeBackEmail } from '@/lib/notifications';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -42,6 +43,18 @@ export const authOptions: NextAuthOptions = {
 
         // Check if user has active subscription
         const hasActiveSubscription = user.subscriptions.length > 0;
+        const subscriptionEnd = user.subscriptions[0]?.endDate || null;
+
+        // Send welcome back email (don't await - run in background)
+        // Skip for admin users to avoid spam
+        if (user.role !== 'ADMIN') {
+          sendWelcomeBackEmail({
+            name: user.name || user.email,
+            email: user.email,
+            hasActiveSubscription,
+            subscriptionEnd,
+          }).catch(console.error);
+        }
 
         return {
           id: user.id,
@@ -50,7 +63,7 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           phone: user.phone,
           hasActiveSubscription,
-          subscriptionEnd: user.subscriptions[0]?.endDate || null,
+          subscriptionEnd: subscriptionEnd,
         };
       },
     }),

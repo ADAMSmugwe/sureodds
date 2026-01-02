@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { hash } from 'bcryptjs';
 import prisma from '@/lib/prisma';
 import { z } from 'zod';
+import { sendWelcomeEmail } from '@/lib/notifications';
 
 const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -54,6 +55,9 @@ export async function POST(request: NextRequest) {
         name: true,
       },
     });
+
+    // Send welcome email (don't await - let it run in background)
+    sendWelcomeEmail({ name: name || email, email }).catch(console.error);
 
     return NextResponse.json(
       { message: 'Account created successfully', user },

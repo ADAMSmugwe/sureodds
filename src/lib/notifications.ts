@@ -628,3 +628,252 @@ SureOdds Analytics Team
     console.error('❌ Expiry reminder email error:', error);
   }
 }
+
+/**
+ * Send welcome email to new users who just signed up
+ */
+export async function sendWelcomeEmail(data: { name: string; email: string }): Promise<void> {
+  try {
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+      console.log('Email not configured - skipping welcome email');
+      return;
+    }
+
+    const transporter = createEmailTransporter();
+    const firstName = data.name?.split(' ')[0] || 'Champion';
+    
+    const mailOptions = {
+      from: `SureOdds Analytics <${process.env.GMAIL_USER}>`,
+      to: data.email,
+      subject: `🎉 Welcome to SureOdds, ${firstName}! Your Winning Journey Starts Now`,
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 16px; overflow: hidden;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 28px;">🏆 Welcome to SureOdds!</h1>
+            <p style="color: #d1fae5; margin: 10px 0 0 0; font-size: 16px;">Your winning journey starts today</p>
+          </div>
+          
+          <!-- Main Content -->
+          <div style="padding: 40px 30px; color: #e2e8f0;">
+            <p style="font-size: 18px; margin: 0 0 20px 0;">
+              Hey <strong style="color: #10b981;">${firstName}</strong>! 👋
+            </p>
+            
+            <p style="font-size: 16px; line-height: 1.8; margin: 0 0 25px 0;">
+              Welcome to the <strong>SureOdds family</strong>! You've just joined thousands of smart bettors who trust us to turn their predictions into profits. 💰
+            </p>
+            
+            <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 25px; margin: 25px 0;">
+              <h3 style="color: #10b981; margin: 0 0 15px 0;">🎯 What Makes Us Different?</h3>
+              <ul style="margin: 0; padding-left: 20px; line-height: 2;">
+                <li><strong>85%+ Win Rate</strong> - Proven track record that speaks for itself</li>
+                <li><strong>Expert Analysis</strong> - Deep research, not just lucky guesses</li>
+                <li><strong>Premium Tips</strong> - VIP predictions with higher odds</li>
+                <li><strong>24/7 Support</strong> - We're always here to help you win</li>
+              </ul>
+            </div>
+            
+            <p style="font-size: 16px; line-height: 1.8; margin: 25px 0;">
+              🎁 <strong>Start exploring our FREE daily picks</strong> and see why our members call us their "secret weapon" for consistent wins!
+            </p>
+            
+            <div style="text-align: center; margin: 35px 0;">
+              <a href="${process.env.NEXTAUTH_URL || 'https://sureodds.vercel.app'}/predictions" 
+                 style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                🔥 View Today's Predictions
+              </a>
+            </div>
+            
+            <div style="background: rgba(251, 191, 36, 0.1); border-left: 4px solid #fbbf24; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+              <p style="margin: 0; color: #fcd34d;">
+                <strong>💡 Pro Tip:</strong> Upgrade to VIP to access our premium predictions with even higher odds and exclusive insights. Our VIP members see the biggest wins!
+              </p>
+            </div>
+            
+            <p style="font-size: 16px; line-height: 1.8; margin: 25px 0 0 0;">
+              Ready to start winning? We believe in you, ${firstName}! 🌟
+            </p>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background: #0f172a; padding: 25px 30px; text-align: center; border-top: 1px solid #334155;">
+            <p style="color: #94a3b8; margin: 0 0 10px 0; font-size: 14px;">
+              Questions? Just reply to this email - we'd love to hear from you!
+            </p>
+            <p style="color: #64748b; margin: 0; font-size: 12px;">
+              © ${new Date().getFullYear()} SureOdds Analytics. Bet smart, win big! 🎯
+            </p>
+          </div>
+        </div>
+      `,
+      text: `
+Hey ${firstName}! 👋
+
+Welcome to SureOdds Analytics! 🎉
+
+You've just joined thousands of smart bettors who trust us to turn their predictions into profits.
+
+🎯 What Makes Us Different?
+• 85%+ Win Rate - Proven track record
+• Expert Analysis - Deep research, not just guesses
+• Premium Tips - VIP predictions with higher odds
+• 24/7 Support - We're always here to help
+
+Start exploring our FREE daily picks and see why our members call us their "secret weapon"!
+
+Visit: ${process.env.NEXTAUTH_URL || 'https://sureodds.vercel.app'}/predictions
+
+💡 Pro Tip: Upgrade to VIP for premium predictions with even higher odds!
+
+Ready to start winning? We believe in you!
+
+Best regards,
+SureOdds Analytics Team 🏆
+      `.trim(),
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('✅ Welcome email sent to:', data.email);
+
+  } catch (error) {
+    console.error('❌ Welcome email error:', error);
+  }
+}
+
+/**
+ * Send welcome back email when user logs in
+ */
+export async function sendWelcomeBackEmail(data: { 
+  name: string; 
+  email: string; 
+  hasActiveSubscription: boolean;
+  subscriptionEnd?: Date | null;
+}): Promise<void> {
+  try {
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+      console.log('Email not configured - skipping welcome back email');
+      return;
+    }
+
+    const transporter = createEmailTransporter();
+    const firstName = data.name?.split(' ')[0] || 'Champion';
+    const isVIP = data.hasActiveSubscription;
+    
+    // Different content based on subscription status
+    const statusBadge = isVIP 
+      ? '<span style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #1e293b; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">👑 VIP MEMBER</span>'
+      : '<span style="background: #334155; color: #94a3b8; padding: 4px 12px; border-radius: 20px; font-size: 12px;">FREE MEMBER</span>';
+    
+    const subscriptionInfo = isVIP && data.subscriptionEnd
+      ? `<p style="font-size: 14px; color: #10b981; margin: 10px 0 0 0;">✨ VIP Access active until: <strong>${new Date(data.subscriptionEnd).toLocaleDateString()}</strong></p>`
+      : '';
+    
+    const ctaSection = isVIP
+      ? `
+        <div style="text-align: center; margin: 35px 0;">
+          <a href="${process.env.NEXTAUTH_URL || 'https://sureodds.vercel.app'}/predictions" 
+             style="display: inline-block; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #1e293b; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+            👑 View Your VIP Predictions
+          </a>
+        </div>
+      `
+      : `
+        <div style="text-align: center; margin: 35px 0;">
+          <a href="${process.env.NEXTAUTH_URL || 'https://sureodds.vercel.app'}/pricing" 
+             style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+            🚀 Upgrade to VIP Now
+          </a>
+        </div>
+        <div style="background: rgba(251, 191, 36, 0.1); border-left: 4px solid #fbbf24; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+          <p style="margin: 0; color: #fcd34d;">
+            <strong>🔓 Unlock Premium Tips!</strong> VIP members get access to our highest-confidence predictions with better odds. Start from just KES 50/day!
+          </p>
+        </div>
+      `;
+
+    const mailOptions = {
+      from: `SureOdds Analytics <${process.env.GMAIL_USER}>`,
+      to: data.email,
+      subject: `👋 Welcome back, ${firstName}! Today's hot picks are waiting for you 🔥`,
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 16px; overflow: hidden;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 40px 30px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 26px;">👋 Welcome Back, ${firstName}!</h1>
+            <p style="color: #bfdbfe; margin: 10px 0 0 0; font-size: 16px;">Great to see you again</p>
+          </div>
+          
+          <!-- Status Badge -->
+          <div style="text-align: center; padding: 20px 30px 0 30px;">
+            ${statusBadge}
+            ${subscriptionInfo}
+          </div>
+          
+          <!-- Main Content -->
+          <div style="padding: 30px; color: #e2e8f0;">
+            <p style="font-size: 16px; line-height: 1.8; margin: 0 0 20px 0;">
+              You've logged back into your winning headquarters! 💪 Our analysts have been hard at work finding the best picks for you.
+            </p>
+            
+            <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 25px; margin: 20px 0;">
+              <h3 style="color: #60a5fa; margin: 0 0 15px 0;">📊 Today's Highlights</h3>
+              <ul style="margin: 0; padding-left: 20px; line-height: 2; color: #cbd5e1;">
+                <li>🎯 Fresh predictions ready for you</li>
+                <li>📈 Updated win statistics</li>
+                <li>⚽ Live match analysis available</li>
+                <li>💎 ${isVIP ? 'Your VIP picks are waiting!' : 'Premium picks available with VIP'}</li>
+              </ul>
+            </div>
+            
+            ${ctaSection}
+            
+            <p style="font-size: 15px; line-height: 1.8; color: #94a3b8; margin: 25px 0 0 0; text-align: center;">
+              Remember: Consistency is key. Trust the process, and the wins will follow! 🎯
+            </p>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background: #0f172a; padding: 25px 30px; text-align: center; border-top: 1px solid #334155;">
+            <p style="color: #94a3b8; margin: 0 0 10px 0; font-size: 14px;">
+              Need help? Just reply to this email!
+            </p>
+            <p style="color: #64748b; margin: 0; font-size: 12px;">
+              © ${new Date().getFullYear()} SureOdds Analytics. Let's win together! 🏆
+            </p>
+          </div>
+        </div>
+      `,
+      text: `
+Hey ${firstName}! 👋
+
+Welcome back to SureOdds Analytics!
+
+${isVIP ? '👑 VIP Status: Active' : '📌 Status: Free Member'}
+${isVIP && data.subscriptionEnd ? `VIP Access until: ${new Date(data.subscriptionEnd).toLocaleDateString()}` : ''}
+
+Today's Highlights:
+🎯 Fresh predictions ready for you
+📈 Updated win statistics  
+⚽ Live match analysis available
+💎 ${isVIP ? 'Your VIP picks are waiting!' : 'Premium picks available with VIP'}
+
+${isVIP 
+  ? `View your VIP predictions: ${process.env.NEXTAUTH_URL || 'https://sureodds.vercel.app'}/predictions`
+  : `Upgrade to VIP: ${process.env.NEXTAUTH_URL || 'https://sureodds.vercel.app'}/pricing`
+}
+
+Remember: Consistency is key. Trust the process, and the wins will follow!
+
+Best regards,
+SureOdds Analytics Team 🏆
+      `.trim(),
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('✅ Welcome back email sent to:', data.email);
+
+  } catch (error) {
+    console.error('❌ Welcome back email error:', error);
+  }
+}
