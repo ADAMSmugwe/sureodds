@@ -26,8 +26,10 @@ model User {
   id            String         @id @default(cuid())
   email         String         @unique
   phone         String?        // For M-Pesa pre-fill
-  password      String
+  password      String?        // Optional for OAuth users
   name          String?
+  image         String?        // Profile image from OAuth
+  provider      String?        // 'credentials' or 'google'
   role          Role           @default(USER)
   subscriptions Subscription[]
   transactions  Transaction[]

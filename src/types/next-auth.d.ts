@@ -6,6 +6,7 @@ declare module 'next-auth' {
     id: string;
     role: Role;
     phone: string | null;
+    image?: string | null;
     hasActiveSubscription: boolean;
     subscriptionEnd: Date | null;
   }
@@ -15,6 +16,7 @@ declare module 'next-auth' {
       id: string;
       email: string;
       name?: string | null;
+      image?: string | null;
       role: string;
       phone: string | null;
       hasActiveSubscription: boolean;
@@ -28,6 +30,7 @@ declare module 'next-auth/jwt' {
     id: string;
     role: string;
     phone: string | null;
+    image?: string | null;
     hasActiveSubscription: boolean;
     subscriptionEnd: Date | null;
   }
