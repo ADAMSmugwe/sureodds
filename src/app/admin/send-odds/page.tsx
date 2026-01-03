@@ -6,8 +6,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Send, 
-  Plus, 
-  Trash2, 
   ArrowLeft, 
   Users, 
   Loader2, 
@@ -15,16 +13,21 @@ import {
   AlertCircle,
   Clock,
   Trophy,
-  Target
+  Target,
+  CheckSquare,
+  Square,
+  RefreshCw
 } from 'lucide-react';
 
-interface OddItem {
+interface VipPrediction {
   id: string;
   match: string;
   league: string;
   kickoff: string;
+  kickoffDate: string;
   tip: string;
   odds: string;
+  status: string;
 }
 
 interface Subscriber {
@@ -40,13 +43,12 @@ export default function SendOddsPage() {
   
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
-  const [odds, setOdds] = useState<OddItem[]>([
-    { id: '1', match: '', league: '', kickoff: '', tip: '', odds: '' }
-  ]);
+  const [vipPredictions, setVipPredictions] = useState<VipPrediction[]>([]);
+  const [selectedPredictions, setSelectedPredictions] = useState<Set<string>>(new Set());
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [subscriberCount, setSubscriberCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [fetchingSubscribers, setFetchingSubscribers] = useState(true);
+  const [fetchingData, setFetchingData] = useState(true);
   const [result, setResult] = useState<{
     type: 'success' | 'error';
     message: string;
@@ -63,51 +65,66 @@ export default function SendOddsPage() {
   }, [session, status, router]);
 
   useEffect(() => {
-    fetchSubscribers();
+    fetchData();
   }, []);
 
-  const fetchSubscribers = async () => {
+  const fetchData = async () => {
     try {
-      setFetchingSubscribers(true);
+      setFetchingData(true);
       const res = await fetch('/api/odds/send');
       const data = await res.json();
       if (res.ok) {
         setSubscribers(data.subscribers || []);
         setSubscriberCount(data.count || 0);
+        setVipPredictions(data.predictions || []);
+        // Auto-select all pending predictions
+        const pendingIds = (data.predictions || [])
+          .filter((p: VipPrediction) => p.status === 'PENDING')
+          .map((p: VipPrediction) => p.id);
+        setSelectedPredictions(new Set(pendingIds));
       }
     } catch (error) {
-      console.error('Failed to fetch subscribers:', error);
+      console.error('Failed to fetch data:', error);
     } finally {
-      setFetchingSubscribers(false);
+      setFetchingData(false);
     }
   };
 
-  const addOdd = () => {
-    setOdds([
-      ...odds,
-      { id: Date.now().toString(), match: '', league: '', kickoff: '', tip: '', odds: '' }
-    ]);
-  };
-
-  const removeOdd = (id: string) => {
-    if (odds.length > 1) {
-      setOdds(odds.filter(odd => odd.id !== id));
+  const togglePrediction = (id: string) => {
+    const newSelected = new Set(selectedPredictions);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
     }
+    setSelectedPredictions(newSelected);
   };
 
-  const updateOdd = (id: string, field: keyof OddItem, value: string) => {
-    setOdds(odds.map(odd => 
-      odd.id === id ? { ...odd, [field]: value } : odd
-    ));
+  const selectAll = () => {
+    const allIds = vipPredictions.map(p => p.id);
+    setSelectedPredictions(new Set(allIds));
+  };
+
+  const deselectAll = () => {
+    setSelectedPredictions(new Set());
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate odds
-    const validOdds = odds.filter(odd => odd.match && odd.tip);
-    if (validOdds.length === 0) {
-      setResult({ type: 'error', message: 'Please add at least one valid prediction with match and tip' });
+    // Get selected predictions
+    const selectedOdds = vipPredictions
+      .filter(p => selectedPredictions.has(p.id))
+      .map(p => ({
+        match: p.match,
+        league: p.league,
+        kickoff: p.kickoff,
+        tip: p.tip,
+        odds: p.odds,
+      }));
+
+    if (selectedOdds.length === 0) {
+      setResult({ type: 'error', message: 'Please select at least one prediction to send' });
       return;
     }
 
@@ -119,7 +136,7 @@ export default function SendOddsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          odds: validOdds,
+          odds: selectedOdds,
           title,
           message,
         }),
@@ -134,12 +151,6 @@ export default function SendOddsPage() {
           sent: data.sent,
           failed: data.failed,
         });
-        // Clear form on success
-        if (data.sent > 0) {
-          setOdds([{ id: '1', match: '', league: '', kickoff: '', tip: '', odds: '' }]);
-          setTitle('');
-          setMessage('');
-        }
       } else {
         setResult({ type: 'error', message: data.error || 'Failed to send odds' });
       }
@@ -148,6 +159,14 @@ export default function SendOddsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    });
   };
 
   if (status === 'loading' || (session?.user?.role !== 'ADMIN')) {
@@ -171,7 +190,7 @@ export default function SendOddsPage() {
           </Link>
           <div>
             <h1 className="text-3xl font-bold text-white">Send Daily Odds</h1>
-            <p className="text-slate-400">Send today's predictions to all active subscribers</p>
+            <p className="text-slate-400">Send VIP predictions to all active subscribers</p>
           </div>
         </div>
 
@@ -188,15 +207,16 @@ export default function SendOddsPage() {
               </div>
             </div>
             <div className="text-right">
-              {fetchingSubscribers ? (
+              {fetchingData ? (
                 <Loader2 className="w-6 h-6 animate-spin text-primary-500" />
               ) : (
                 <>
                   <div className="text-4xl font-bold text-primary-400">{subscriberCount}</div>
                   <button
-                    onClick={fetchSubscribers}
-                    className="text-xs text-slate-400 hover:text-primary-400 transition"
+                    onClick={fetchData}
+                    className="text-xs text-slate-400 hover:text-primary-400 transition flex items-center gap-1"
                   >
+                    <RefreshCw size={12} />
                     Refresh
                   </button>
                 </>
@@ -290,96 +310,123 @@ export default function SendOddsPage() {
             </div>
           </div>
 
-          {/* Odds Input */}
+          {/* VIP Predictions Selection */}
           <div className="bg-dark-100 rounded-xl border border-slate-800 p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                 <Target className="text-primary-500" size={20} />
-                Today's Predictions
+                VIP Predictions
+                <span className="text-sm font-normal text-slate-400">
+                  ({selectedPredictions.size} selected)
+                </span>
               </h2>
-              <button
-                type="button"
-                onClick={addOdd}
-                className="flex items-center gap-2 px-3 py-2 bg-primary-600/20 hover:bg-primary-600/30 text-primary-400 rounded-lg transition text-sm"
-              >
-                <Plus size={16} />
-                Add Match
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={selectAll}
+                  className="px-3 py-1.5 text-xs bg-primary-600/20 hover:bg-primary-600/30 text-primary-400 rounded-lg transition"
+                >
+                  Select All
+                </button>
+                <button
+                  type="button"
+                  onClick={deselectAll}
+                  className="px-3 py-1.5 text-xs bg-slate-700/50 hover:bg-slate-700 text-slate-400 rounded-lg transition"
+                >
+                  Deselect All
+                </button>
+                <button
+                  type="button"
+                  onClick={fetchData}
+                  className="p-1.5 bg-slate-700/50 hover:bg-slate-700 text-slate-400 rounded-lg transition"
+                  title="Refresh predictions"
+                >
+                  <RefreshCw size={14} />
+                </button>
+              </div>
             </div>
 
-            <div className="space-y-4">
-              {odds.map((odd, index) => (
-                <div 
-                  key={odd.id}
-                  className="p-4 bg-dark-200 rounded-xl border border-slate-700"
+            {fetchingData ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+              </div>
+            ) : vipPredictions.length === 0 ? (
+              <div className="text-center py-12">
+                <Target className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+                <p className="text-slate-400 mb-2">No VIP predictions found</p>
+                <p className="text-slate-500 text-sm mb-4">
+                  Create VIP predictions in the Admin Panel first (mark them as Premium/VIP)
+                </p>
+                <Link
+                  href="/admin"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-lg transition text-sm"
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium text-slate-400">Match #{index + 1}</span>
-                    {odds.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeOdd(odd.id)}
-                        className="p-1 hover:bg-red-500/20 rounded text-red-400 transition"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                  
-                  <div className="grid md:grid-cols-2 gap-3 mb-3">
-                    <input
-                      type="text"
-                      value={odd.match}
-                      onChange={(e) => updateOdd(odd.id, 'match', e.target.value)}
-                      placeholder="Match (e.g., Arsenal vs Liverpool)"
-                      className="w-full px-3 py-2 bg-dark-100 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:border-primary-500 transition text-sm"
-                      required
-                    />
-                    <input
-                      type="text"
-                      value={odd.league}
-                      onChange={(e) => updateOdd(odd.id, 'league', e.target.value)}
-                      placeholder="League (e.g., Premier League)"
-                      className="w-full px-3 py-2 bg-dark-100 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:border-primary-500 transition text-sm"
-                    />
-                  </div>
-                  
-                  <div className="grid md:grid-cols-3 gap-3">
-                    <div className="relative">
-                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
-                      <input
-                        type="text"
-                        value={odd.kickoff}
-                        onChange={(e) => updateOdd(odd.id, 'kickoff', e.target.value)}
-                        placeholder="Kickoff (e.g., 20:00)"
-                        className="w-full pl-9 pr-3 py-2 bg-dark-100 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:border-primary-500 transition text-sm"
-                      />
+                  Go to Admin Panel
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {vipPredictions.map((prediction) => (
+                  <div 
+                    key={prediction.id}
+                    onClick={() => togglePrediction(prediction.id)}
+                    className={`p-4 rounded-xl border cursor-pointer transition ${
+                      selectedPredictions.has(prediction.id)
+                        ? 'bg-primary-600/10 border-primary-500/50'
+                        : 'bg-dark-200 border-slate-700 hover:border-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="mt-1">
+                        {selectedPredictions.has(prediction.id) ? (
+                          <CheckSquare className="text-primary-500" size={20} />
+                        ) : (
+                          <Square className="text-slate-500" size={20} />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <h3 className="font-semibold text-white truncate">
+                            {prediction.match}
+                          </h3>
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            prediction.status === 'PENDING' ? 'bg-amber-500/20 text-amber-400' :
+                            prediction.status === 'WON' ? 'bg-green-500/20 text-green-400' :
+                            prediction.status === 'LOST' ? 'bg-red-500/20 text-red-400' :
+                            'bg-slate-500/20 text-slate-400'
+                          }`}>
+                            {prediction.status}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                          <span className="text-slate-400">{prediction.league}</span>
+                          <span className="flex items-center gap-1 text-slate-500">
+                            <Clock size={12} />
+                            {formatDate(prediction.kickoffDate)} • {prediction.kickoff}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-2">
+                          <span className="px-3 py-1 bg-primary-600/20 text-primary-400 rounded-lg text-sm font-medium">
+                            {prediction.tip}
+                          </span>
+                          {prediction.odds && (
+                            <span className="text-amber-400 font-semibold">
+                              @ {prediction.odds}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <input
-                      type="text"
-                      value={odd.tip}
-                      onChange={(e) => updateOdd(odd.id, 'tip', e.target.value)}
-                      placeholder="Tip (e.g., Home Win)"
-                      className="w-full px-3 py-2 bg-dark-100 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:border-primary-500 transition text-sm"
-                      required
-                    />
-                    <input
-                      type="text"
-                      value={odd.odds}
-                      onChange={(e) => updateOdd(odd.id, 'odds', e.target.value)}
-                      placeholder="Odds (e.g., 1.85)"
-                      className="w-full px-3 py-2 bg-dark-100 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:border-primary-500 transition text-sm"
-                    />
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading || subscriberCount === 0}
+            disabled={loading || subscriberCount === 0 || selectedPredictions.size === 0}
             className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-primary-600 to-amber-600 hover:from-primary-500 hover:to-amber-500 disabled:from-slate-700 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition text-lg"
           >
             {loading ? (
@@ -390,14 +437,20 @@ export default function SendOddsPage() {
             ) : (
               <>
                 <Send size={24} />
-                Send to {subscriberCount} Active Subscriber{subscriberCount !== 1 ? 's' : ''}
+                Send {selectedPredictions.size} Prediction{selectedPredictions.size !== 1 ? 's' : ''} to {subscriberCount} Subscriber{subscriberCount !== 1 ? 's' : ''}
               </>
             )}
           </button>
           
-          {subscriberCount === 0 && !fetchingSubscribers && (
+          {subscriberCount === 0 && !fetchingData && (
             <p className="text-center text-slate-400 mt-3 text-sm">
               No active subscribers found. Create vouchers or wait for subscriptions.
+            </p>
+          )}
+          
+          {selectedPredictions.size === 0 && vipPredictions.length > 0 && (
+            <p className="text-center text-slate-400 mt-3 text-sm">
+              Select at least one prediction to send.
             </p>
           )}
         </form>

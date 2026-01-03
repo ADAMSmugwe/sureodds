@@ -147,9 +147,37 @@ export async function GET(req: NextRequest) {
       }
     });
 
+    // Get today's VIP predictions
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const vipPredictions = await prisma.prediction.findMany({
+      where: {
+        isPremium: true,
+        kickOff: {
+          gte: today,
+        },
+      },
+      orderBy: {
+        kickOff: 'asc',
+      },
+    });
+
     return NextResponse.json({
       count: uniqueUsers.size,
       subscribers: Array.from(uniqueUsers.values()),
+      predictions: vipPredictions.map(p => ({
+        id: p.id,
+        match: `${p.homeTeam} vs ${p.awayTeam}`,
+        league: p.league,
+        kickoff: new Date(p.kickOff).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+        kickoffDate: p.kickOff,
+        tip: p.tip,
+        odds: p.odds.toString(),
+        status: p.status,
+      })),
     });
 
   } catch (error) {
