@@ -17,7 +17,8 @@ import {
   X,
   Ticket,
   BookOpen,
-  Settings
+  Settings,
+  Send
 } from 'lucide-react';
 
 interface Prediction {
@@ -196,7 +197,22 @@ export default function AdminPage() {
         </div>
 
         {/* Quick Links */}
-        <div className="grid md:grid-cols-3 gap-4 mb-8">
+        <div className="grid md:grid-cols-4 gap-4 mb-8">
+          <Link 
+            href="/admin/send-odds"
+            className="p-4 bg-gradient-to-br from-primary-600/20 to-amber-600/20 rounded-xl border border-primary-500/30 hover:border-primary-500/60 transition group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary-500/20 rounded-lg flex items-center justify-center">
+                <Send className="text-primary-400" size={20} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white group-hover:text-primary-400 transition">Send Odds</h3>
+                <p className="text-slate-400 text-sm">Email to subscribers</p>
+              </div>
+            </div>
+          </Link>
+          
           <Link 
             href="/admin/vouchers"
             className="p-4 bg-dark-100 rounded-xl border border-slate-800 hover:border-amber-500/50 transition group"
