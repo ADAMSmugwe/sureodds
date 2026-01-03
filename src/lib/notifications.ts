@@ -877,3 +877,264 @@ SureOdds Analytics Team 🏆
     console.error('❌ Welcome back email error:', error);
   }
 }
+
+/**
+ * Send voucher code email to user
+ */
+export async function sendVoucherEmail(data: {
+  email: string;
+  code: string;
+  planType: string;
+  expiresAt: Date;
+}): Promise<void> {
+  try {
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+      console.log('Email not configured - skipping voucher email');
+      return;
+    }
+
+    const transporter = createEmailTransporter();
+    
+    const planNames: Record<string, string> = {
+      DAILY: 'Daily (1 Day)',
+      WEEKLY: 'Weekly (7 Days)',
+      MONTHLY: 'Monthly (30 Days)',
+    };
+
+    const planName = planNames[data.planType] || data.planType;
+    const expiryDate = new Date(data.expiresAt).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    const mailOptions = {
+      from: `SureOdds Analytics <${process.env.GMAIL_USER}>`,
+      to: data.email,
+      subject: `🎁 Your SureOdds VIP Access Code - ${planName}`,
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 16px; overflow: hidden;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 28px;">🎁 Your VIP Access Code</h1>
+            <p style="color: #d1fae5; margin: 10px 0 0 0; font-size: 16px;">Premium predictions await you!</p>
+          </div>
+          
+          <!-- Main Content -->
+          <div style="padding: 40px 30px; color: #e2e8f0;">
+            <p style="font-size: 16px; line-height: 1.8; margin: 0 0 25px 0;">
+              Thank you for your purchase! Here's your voucher code to activate your <strong style="color: #10b981;">${planName}</strong> VIP subscription:
+            </p>
+            
+            <!-- Voucher Code Box -->
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 12px; padding: 30px; text-align: center; margin: 25px 0;">
+              <p style="color: #d1fae5; margin: 0 0 10px 0; font-size: 14px;">YOUR VOUCHER CODE</p>
+              <p style="color: #ffffff; margin: 0; font-size: 32px; font-weight: bold; letter-spacing: 4px; font-family: monospace;">${data.code}</p>
+            </div>
+            
+            <!-- How to Redeem -->
+            <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 25px; margin: 25px 0;">
+              <h3 style="color: #10b981; margin: 0 0 15px 0;">📝 How to Redeem</h3>
+              <ol style="margin: 0; padding-left: 20px; line-height: 2; color: #cbd5e1;">
+                <li>Go to <a href="${process.env.NEXTAUTH_URL || 'https://sureodds.vercel.app'}/dashboard" style="color: #10b981;">your dashboard</a></li>
+                <li>Click on <strong style="color: #fff;">"Redeem Voucher"</strong></li>
+                <li>Enter your code: <strong style="color: #10b981;">${data.code}</strong></li>
+                <li>Enjoy instant VIP access! 🎉</li>
+              </ol>
+            </div>
+            
+            <!-- Expiry Warning -->
+            <div style="background: rgba(251, 191, 36, 0.1); border-left: 4px solid #fbbf24; padding: 15px 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+              <p style="margin: 0; color: #fcd34d; font-size: 14px;">
+                ⚠️ <strong>Important:</strong> This code expires on <strong>${expiryDate}</strong>. Please redeem it before then!
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 35px 0;">
+              <a href="${process.env.NEXTAUTH_URL || 'https://sureodds.vercel.app'}/dashboard" 
+                 style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                🚀 Redeem Now
+              </a>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background: #0f172a; padding: 25px 30px; text-align: center; border-top: 1px solid #334155;">
+            <p style="color: #94a3b8; margin: 0 0 10px 0; font-size: 14px;">
+              Questions? Just reply to this email!
+            </p>
+            <p style="color: #64748b; margin: 0; font-size: 12px;">
+              © ${new Date().getFullYear()} SureOdds Analytics. Let's win together! 🏆
+            </p>
+          </div>
+        </div>
+      `,
+      text: `
+Your SureOdds VIP Access Code
+
+Thank you for your purchase! Here's your voucher code:
+
+CODE: ${data.code}
+PLAN: ${planName}
+EXPIRES: ${expiryDate}
+
+How to Redeem:
+1. Go to ${process.env.NEXTAUTH_URL || 'https://sureodds.vercel.app'}/dashboard
+2. Click on "Redeem Voucher"
+3. Enter your code: ${data.code}
+4. Enjoy instant VIP access!
+
+This code expires on ${expiryDate}. Please redeem it before then!
+
+Best regards,
+SureOdds Analytics Team
+      `.trim(),
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('✅ Voucher email sent to:', data.email);
+
+  } catch (error) {
+    console.error('❌ Voucher email error:', error);
+  }
+}
+
+/**
+ * Send subscription activated confirmation email
+ */
+export async function sendSubscriptionActivatedEmail(data: {
+  email: string;
+  name: string;
+  planType: string;
+  endDate: Date;
+}): Promise<void> {
+  try {
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+      console.log('Email not configured - skipping subscription email');
+      return;
+    }
+
+    const transporter = createEmailTransporter();
+    
+    const planNames: Record<string, string> = {
+      DAILY: 'Daily',
+      WEEKLY: 'Weekly',
+      MONTHLY: 'Monthly',
+    };
+
+    const planName = planNames[data.planType] || data.planType;
+    const firstName = data.name?.split(' ')[0] || 'Champion';
+    const expiryDate = new Date(data.endDate).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const mailOptions = {
+      from: `SureOdds Analytics <${process.env.GMAIL_USER}>`,
+      to: data.email,
+      subject: `🎉 VIP Access Activated - ${planName} Plan`,
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 16px; overflow: hidden;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); padding: 40px 30px; text-align: center;">
+            <h1 style="color: #1e293b; margin: 0; font-size: 28px;">👑 VIP Access Activated!</h1>
+            <p style="color: #1e293b; margin: 10px 0 0 0; font-size: 16px;">Welcome to the winners' circle</p>
+          </div>
+          
+          <!-- Main Content -->
+          <div style="padding: 40px 30px; color: #e2e8f0;">
+            <p style="font-size: 18px; margin: 0 0 20px 0;">
+              Hey <strong style="color: #fbbf24;">${firstName}</strong>! 🎊
+            </p>
+            
+            <p style="font-size: 16px; line-height: 1.8; margin: 0 0 25px 0;">
+              Your <strong style="color: #10b981;">${planName} VIP subscription</strong> is now active! You now have full access to all our premium predictions and expert analysis.
+            </p>
+            
+            <!-- Subscription Details -->
+            <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 12px; padding: 25px; margin: 25px 0;">
+              <h3 style="color: #fbbf24; margin: 0 0 15px 0;">📋 Subscription Details</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 10px 0; color: #94a3b8; border-bottom: 1px solid #334155;">Plan</td>
+                  <td style="padding: 10px 0; color: #fbbf24; font-weight: bold; text-align: right; border-bottom: 1px solid #334155;">${planName} VIP</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; color: #94a3b8;">Valid Until</td>
+                  <td style="padding: 10px 0; color: #10b981; font-weight: bold; text-align: right;">${expiryDate}</td>
+                </tr>
+              </table>
+            </div>
+            
+            <!-- What You Get -->
+            <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 25px; margin: 25px 0;">
+              <h3 style="color: #10b981; margin: 0 0 15px 0;">🎯 What You Get</h3>
+              <ul style="margin: 0; padding-left: 20px; line-height: 2; color: #cbd5e1;">
+                <li>✅ Access to ALL premium predictions</li>
+                <li>✅ Higher odds selections</li>
+                <li>✅ Expert match analysis</li>
+                <li>✅ Priority support</li>
+              </ul>
+            </div>
+            
+            <div style="text-align: center; margin: 35px 0;">
+              <a href="${process.env.NEXTAUTH_URL || 'https://sureodds.vercel.app'}/predictions" 
+                 style="display: inline-block; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #1e293b; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                👑 View VIP Predictions
+              </a>
+            </div>
+            
+            <p style="font-size: 14px; color: #94a3b8; text-align: center; margin: 25px 0 0 0;">
+              Let's start winning together! 🏆
+            </p>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background: #0f172a; padding: 25px 30px; text-align: center; border-top: 1px solid #334155;">
+            <p style="color: #94a3b8; margin: 0 0 10px 0; font-size: 14px;">
+              Need help? Just reply to this email!
+            </p>
+            <p style="color: #64748b; margin: 0; font-size: 12px;">
+              © ${new Date().getFullYear()} SureOdds Analytics. Bet smart, win big! 🎯
+            </p>
+          </div>
+        </div>
+      `,
+      text: `
+Hey ${firstName}! 🎊
+
+Your ${planName} VIP subscription is now active!
+
+SUBSCRIPTION DETAILS
+--------------------
+Plan: ${planName} VIP
+Valid Until: ${expiryDate}
+
+WHAT YOU GET
+------------
+✅ Access to ALL premium predictions
+✅ Higher odds selections
+✅ Expert match analysis
+✅ Priority support
+
+View your VIP predictions: ${process.env.NEXTAUTH_URL || 'https://sureodds.vercel.app'}/predictions
+
+Let's start winning together! 🏆
+
+Best regards,
+SureOdds Analytics Team
+      `.trim(),
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('✅ Subscription activated email sent to:', data.email);
+
+  } catch (error) {
+    console.error('❌ Subscription activated email error:', error);
+  }
+}

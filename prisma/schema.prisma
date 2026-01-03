@@ -116,6 +116,23 @@ model Booking {
   @@index([reminderSent])
 }
 
+// Voucher codes for subscription activation
+model Voucher {
+  id          String    @id @default(cuid())
+  code        String    @unique  // e.g., "DAILY-ABC123"
+  planType    String    // DAILY, WEEKLY, MONTHLY
+  email       String    // Email to send the code to
+  isRedeemed  Boolean   @default(false)
+  redeemedBy  String?   // User ID who redeemed
+  redeemedAt  DateTime?
+  expiresAt   DateTime  // Code expiry date
+  createdAt   DateTime  @default(now())
+
+  @@index([code])
+  @@index([email])
+  @@index([isRedeemed])
+}
+
 // Site settings for configurable values
 model Setting {
   id        String   @id @default(cuid())

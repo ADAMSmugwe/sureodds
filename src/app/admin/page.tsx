@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
+import Link from 'next/link';
 import { 
   Plus, 
   Loader2, 
@@ -13,7 +14,10 @@ import {
   Trash2,
   Edit,
   Save,
-  X
+  X,
+  Ticket,
+  BookOpen,
+  Settings
 } from 'lucide-react';
 
 interface Prediction {
@@ -189,6 +193,54 @@ export default function AdminPage() {
             <Plus size={20} />
             Add Prediction
           </button>
+        </div>
+
+        {/* Quick Links */}
+        <div className="grid md:grid-cols-3 gap-4 mb-8">
+          <Link 
+            href="/admin/vouchers"
+            className="p-4 bg-dark-100 rounded-xl border border-slate-800 hover:border-amber-500/50 transition group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center">
+                <Ticket className="text-amber-500" size={20} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white group-hover:text-amber-400 transition">Vouchers</h3>
+                <p className="text-slate-400 text-sm">Generate & manage codes</p>
+              </div>
+            </div>
+          </Link>
+          
+          <Link 
+            href="/admin/bookings"
+            className="p-4 bg-dark-100 rounded-xl border border-slate-800 hover:border-blue-500/50 transition group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                <BookOpen className="text-blue-500" size={20} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white group-hover:text-blue-400 transition">Bookings</h3>
+                <p className="text-slate-400 text-sm">View customer bookings</p>
+              </div>
+            </div>
+          </Link>
+          
+          <Link 
+            href="/admin/settings"
+            className="p-4 bg-dark-100 rounded-xl border border-slate-800 hover:border-purple-500/50 transition group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                <Settings className="text-purple-500" size={20} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white group-hover:text-purple-400 transition">Settings</h3>
+                <p className="text-slate-400 text-sm">Site configuration</p>
+              </div>
+            </div>
+          </Link>
         </div>
 
         {/* Add Prediction Form */}

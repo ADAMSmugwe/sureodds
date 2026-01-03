@@ -1,10 +1,10 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { useSession, signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
-import { Crown, Calendar, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Crown, Calendar, Clock, CheckCircle, XCircle, Loader2, Ticket, Gift } from 'lucide-react';
 import { PredictionCard } from '@/components/PredictionCard';
 
 interface Prediction {
@@ -28,12 +28,18 @@ interface Subscription {
 }
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const router = useRouter();
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  
+  // Voucher redemption state
+  const [voucherCode, setVoucherCode] = useState('');
+  const [redeemingVoucher, setRedeemingVoucher] = useState(false);
+  const [voucherError, setVoucherError] = useState('');
+  const [voucherSuccess, setVoucherSuccess] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -73,6 +79,43 @@ export default function DashboardPage() {
       </div>
     );
   }
+
+  const handleRedeemVoucher = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setVoucherError('');
+    setVoucherSuccess('');
+    setRedeemingVoucher(true);
+
+    try {
+      const res = await fetch('/api/vouchers/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: voucherCode }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to redeem voucher');
+      }
+
+      setVoucherSuccess(`🎉 ${data.message} Your ${data.subscription.planType} plan is now active!`);
+      setVoucherCode('');
+      
+      // Refresh subscription data
+      const subRes = await fetch('/api/subscription');
+      const subData = await subRes.json();
+      setSubscription(subData.subscription || null);
+      
+      // Update session to reflect new subscription
+      await update({ hasActiveSubscription: true, subscriptionEnd: data.subscription.endDate });
+      
+    } catch (err: any) {
+      setVoucherError(err.message);
+    } finally {
+      setRedeemingVoucher(false);
+    }
+  };
 
   const filteredPredictions = predictions.filter((pred) => {
     if (filter === 'pending') return pred.status === 'PENDING';
@@ -122,22 +165,80 @@ export default function DashboardPage() {
             </div>
           </div>
         ) : (
-          <div className="mb-8 p-6 bg-dark-100 rounded-2xl border border-slate-800">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-white">
-                  Upgrade to VIP
-                </h3>
-                <p className="text-slate-400">
-                  Get access to all premium predictions
-                </p>
+          <div className="mb-8 space-y-4">
+            {/* Voucher Redemption */}
+            <div className="p-6 bg-gradient-to-r from-amber-600/10 to-transparent rounded-2xl border border-amber-500/30">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Gift className="text-amber-500" size={24} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-white mb-1">
+                    Have a Voucher Code?
+                  </h3>
+                  <p className="text-slate-400 text-sm mb-4">
+                    Enter your code below to activate your VIP subscription instantly
+                  </p>
+                  
+                  <form onSubmit={handleRedeemVoucher} className="flex gap-3">
+                    <div className="relative flex-1">
+                      <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                      <input
+                        type="text"
+                        value={voucherCode}
+                        onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                        placeholder="Enter voucher code (e.g., DAILY-ABC123)"
+                        className="w-full pl-10 pr-4 py-3 bg-dark-200 border border-slate-700 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500 font-mono"
+                        required
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={redeemingVoucher || !voucherCode}
+                      className="px-6 py-3 bg-amber-600 hover:bg-amber-500 disabled:bg-amber-600/50 rounded-lg text-white font-medium transition flex items-center gap-2"
+                    >
+                      {redeemingVoucher ? (
+                        <Loader2 className="animate-spin" size={18} />
+                      ) : (
+                        'Redeem'
+                      )}
+                    </button>
+                  </form>
+                  
+                  {voucherError && (
+                    <p className="mt-3 text-red-400 text-sm flex items-center gap-1">
+                      <XCircle size={14} />
+                      {voucherError}
+                    </p>
+                  )}
+                  {voucherSuccess && (
+                    <p className="mt-3 text-green-400 text-sm flex items-center gap-1">
+                      <CheckCircle size={14} />
+                      {voucherSuccess}
+                    </p>
+                  )}
+                </div>
               </div>
-              <button
-                onClick={() => router.push('/pricing')}
-                className="px-6 py-2 bg-primary-600 hover:bg-primary-500 rounded-lg text-white font-medium transition"
-              >
-                View Plans
-              </button>
+            </div>
+
+            {/* Upgrade CTA */}
+            <div className="p-6 bg-dark-100 rounded-2xl border border-slate-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-white">
+                    Don't have a voucher?
+                  </h3>
+                  <p className="text-slate-400">
+                    Get access to all premium predictions
+                  </p>
+                </div>
+                <button
+                  onClick={() => router.push('/pricing')}
+                  className="px-6 py-2 bg-primary-600 hover:bg-primary-500 rounded-lg text-white font-medium transition"
+                >
+                  View Plans
+                </button>
+              </div>
             </div>
           </div>
         )}
