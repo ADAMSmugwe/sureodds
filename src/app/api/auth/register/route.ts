@@ -9,7 +9,20 @@ const registerSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
   name: z.string().optional(),
   phone: z.string().optional(),
+  dateOfBirth: z.string().optional(),
 });
+
+// Calculate age from date of birth
+const calculateAge = (dob: string): number => {
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +37,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { email, password, name, phone } = validation.data;
+    const { email, password, name, phone, dateOfBirth } = validation.data;
+
+    // Server-side age verification
+    if (dateOfBirth) {
+      const age = calculateAge(dateOfBirth);
+      if (age < 18) {
+        return NextResponse.json(
+          { error: 'You must be 18 years or older to register' },
+          { status: 400 }
+        );
+      }
+    }
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -48,6 +72,7 @@ export async function POST(request: NextRequest) {
         password: hashedPassword,
         name,
         phone,
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
       },
       select: {
         id: true,

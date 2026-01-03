@@ -30,6 +30,7 @@ model User {
   name          String?
   image         String?        // Profile image from OAuth
   provider      String?        // 'credentials' or 'google'
+  dateOfBirth   DateTime?      // For 18+ age verification
   role          Role           @default(USER)
   subscriptions Subscription[]
   transactions  Transaction[]

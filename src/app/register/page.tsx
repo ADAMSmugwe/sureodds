@@ -4,13 +4,14 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
-import { Mail, Lock, User, Phone, Loader2, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Phone, Loader2, AlertCircle, CheckCircle, Eye, EyeOff, Calendar } from 'lucide-react';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
+    dateOfBirth: '',
     password: '',
     confirmPassword: '',
   });
@@ -33,9 +34,33 @@ export default function RegisterPage() {
     }
   };
 
+  // Calculate age from date of birth
+  const calculateAge = (dob: string): number => {
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Validate date of birth (18+ requirement)
+    if (!formData.dateOfBirth) {
+      setError('Please enter your date of birth');
+      return;
+    }
+
+    const age = calculateAge(formData.dateOfBirth);
+    if (age < 18) {
+      setError('You must be 18 years or older to register');
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
@@ -57,6 +82,7 @@ export default function RegisterPage() {
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
+          dateOfBirth: formData.dateOfBirth,
           password: formData.password,
         }),
       });
@@ -175,7 +201,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-slate-400 mb-2">Phone (for M-Pesa)</label>
+                <label className="block text-sm text-slate-400 mb-2">Phone <span className="text-slate-500">(for M-Pesa payments)</span></label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
                   <input
@@ -187,6 +213,22 @@ export default function RegisterPage() {
                     autoComplete="tel"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-slate-400 mb-2">Date of Birth <span className="text-amber-500">*</span></label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
+                  <input
+                    type="date"
+                    value={formData.dateOfBirth}
+                    onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                    max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
+                    className="w-full pl-10 pr-4 py-3 bg-dark-200 border border-slate-700 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:border-primary-500 [color-scheme:dark]"
+                    required
+                  />
+                </div>
+                <p className="text-xs text-slate-500 mt-1">You must be 18+ to use this platform</p>
               </div>
 
               <div>
