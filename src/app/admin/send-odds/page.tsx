@@ -48,6 +48,7 @@ export default function SendOddsPage() {
   const [sendType, setSendType] = useState<SendType>('vip');
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
+  const [betSlipLink, setBetSlipLink] = useState('');
   const [predictions, setPredictions] = useState<VipPrediction[]>([]);
   const [selectedPredictions, setSelectedPredictions] = useState<Set<string>>(new Set());
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
@@ -145,6 +146,7 @@ export default function SendOddsPage() {
           title,
           message,
           sendType,
+          betSlipLink,
         }),
       });
 
@@ -360,6 +362,22 @@ export default function SendOddsPage() {
                   rows={2}
                   className="w-full px-4 py-3 bg-dark-200 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition resize-none"
                 />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  🎫 Bet Slip Link (Optional)
+                </label>
+                <input
+                  type="url"
+                  value={betSlipLink}
+                  onChange={(e) => setBetSlipLink(e.target.value)}
+                  placeholder="https://www.betway.co.ke/betslip/..."
+                  className="w-full px-4 py-3 bg-dark-200 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Paste your bet slip link from any betting site. Users can click to copy all selections.
+                </p>
               </div>
             </div>
           </div>

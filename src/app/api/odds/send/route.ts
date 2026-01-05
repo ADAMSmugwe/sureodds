@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { odds, title, message, sendType } = body; // sendType: 'free' or 'vip'
+    const { odds, title, message, sendType, betSlipLink } = body; // sendType: 'free' or 'vip'
 
     if (!odds || odds.length === 0) {
       return NextResponse.json({ error: 'Please add at least one odd/prediction' }, { status: 400 });
@@ -120,6 +120,7 @@ export async function POST(req: NextRequest) {
           odds,
           title: title || defaultTitle,
           message: message || '',
+          betSlipLink: betSlipLink || '',
         }).then(() => {
           sentTo.push(email);
         }).catch((error) => {

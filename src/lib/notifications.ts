@@ -34,6 +34,7 @@ interface DailyOddsData {
   odds: OddItem[];
   title?: string;
   message?: string;
+  betSlipLink?: string;
 }
 
 // Create Gmail SMTP transporter
@@ -1243,6 +1244,20 @@ export async function sendDailyOddsEmail(data: DailyOddsData): Promise<void> {
               </table>
             </div>
             
+            ${data.betSlipLink ? `
+            <!-- Bet Slip Link -->
+            <div style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.2) 100%); border: 2px solid #fbbf24; border-radius: 12px; padding: 25px; margin: 25px 0; text-align: center;">
+              <h3 style="color: #fbbf24; margin: 0 0 12px 0; font-size: 18px;">🎫 Ready-Made Bet Slip</h3>
+              <p style="color: #94a3b8; margin: 0 0 20px 0; font-size: 14px;">
+                Click below to access the bet slip with all selections pre-loaded!
+              </p>
+              <a href="${data.betSlipLink}" 
+                 style="display: inline-block; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #000; text-decoration: none; padding: 14px 35px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                🎯 Open Bet Slip
+              </a>
+            </div>
+            ` : ''}
+            
             <!-- Tips -->
             <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 20px; margin: 25px 0;">
               <h3 style="color: #10b981; margin: 0 0 12px 0; font-size: 16px;">💡 Quick Tips</h3>
@@ -1289,7 +1304,11 @@ TODAY'S PREDICTIONS
 
 ${oddsText}
 
-💡 QUICK TIPS
+${data.betSlipLink ? `🎫 READY-MADE BET SLIP
+---------------------
+Click here to access the bet slip with all selections: ${data.betSlipLink}
+
+` : ''}💡 QUICK TIPS
 -------------
 • Always bet responsibly within your limits
 • Consider using a staking plan for better bankroll management
@@ -1405,6 +1424,20 @@ export async function sendFreePicksEmail(data: DailyOddsData): Promise<void> {
               </table>
             </div>
             
+            ${data.betSlipLink ? `
+            <!-- Bet Slip Link -->
+            <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(29, 78, 216, 0.2) 100%); border: 2px solid #3b82f6; border-radius: 12px; padding: 25px; margin: 25px 0; text-align: center;">
+              <h3 style="color: #60a5fa; margin: 0 0 12px 0; font-size: 18px;">🎫 Ready-Made Bet Slip</h3>
+              <p style="color: #94a3b8; margin: 0 0 20px 0; font-size: 14px;">
+                Click below to access the bet slip with all selections pre-loaded!
+              </p>
+              <a href="${data.betSlipLink}" 
+                 style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #fff; text-decoration: none; padding: 14px 35px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                🎯 Open Bet Slip
+              </a>
+            </div>
+            ` : ''}
+            
             <!-- Upgrade CTA -->
             <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 12px; padding: 25px; margin: 25px 0; text-align: center;">
               <h3 style="color: #10b981; margin: 0 0 12px 0; font-size: 18px;">🔥 Want More Premium Picks?</h3>
@@ -1463,7 +1496,11 @@ TODAY'S FREE PICKS
 
 ${oddsText}
 
-🔥 WANT MORE PREMIUM PICKS?
+${data.betSlipLink ? `🎫 READY-MADE BET SLIP
+---------------------
+Click here to access the bet slip with all selections: ${data.betSlipLink}
+
+` : ''}🔥 WANT MORE PREMIUM PICKS?
 ---------------------------
 Upgrade to VIP for exclusive high-confidence predictions, expert analysis, and higher winning rates!
 Visit: ${process.env.NEXTAUTH_URL || 'https://sureodds-analysis.vercel.app'}/pricing
