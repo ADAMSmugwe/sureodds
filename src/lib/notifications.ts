@@ -1316,3 +1316,182 @@ You're receiving this because you're a VIP subscriber at SureOdds Analytics.
     throw error; // Re-throw to handle in the API route
   }
 }
+
+/**
+ * Send free picks email to all users
+ */
+export async function sendFreePicksEmail(data: DailyOddsData): Promise<void> {
+  try {
+    const transporter = createEmailTransporter();
+    
+    const firstName = data.name?.split(' ')[0] || 'Betting Fan';
+    const todayDate = new Date().toLocaleDateString('en-GB', { 
+      weekday: 'long', 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+    
+    const emailTitle = data.title || `Today's Free Picks - ${todayDate}`;
+    
+    // Generate odds HTML rows
+    const oddsHtml = data.odds.map((odd, index) => `
+      <tr style="background: ${index % 2 === 0 ? '#1e293b' : '#0f172a'};">
+        <td style="padding: 16px; border-bottom: 1px solid #334155;">
+          <div style="font-weight: bold; color: #fff; margin-bottom: 4px;">${odd.match}</div>
+          ${odd.league ? `<div style="font-size: 12px; color: #94a3b8;">${odd.league}</div>` : ''}
+        </td>
+        <td style="padding: 16px; border-bottom: 1px solid #334155; text-align: center; color: #94a3b8;">
+          ${odd.kickoff || '-'}
+        </td>
+        <td style="padding: 16px; border-bottom: 1px solid #334155; text-align: center;">
+          <span style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #fff; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 14px;">
+            ${odd.tip}
+          </span>
+        </td>
+        <td style="padding: 16px; border-bottom: 1px solid #334155; text-align: center; color: #fbbf24; font-weight: bold;">
+          ${odd.odds || '-'}
+        </td>
+      </tr>
+    `).join('');
+
+    // Generate plain text odds
+    const oddsText = data.odds.map((odd, index) => 
+      `${index + 1}. ${odd.match}${odd.league ? ` (${odd.league})` : ''}\n   Kickoff: ${odd.kickoff || 'TBA'} | Tip: ${odd.tip}${odd.odds ? ` | Odds: ${odd.odds}` : ''}`
+    ).join('\n\n');
+
+    const mailOptions = {
+      from: `SureOdds Analytics <${process.env.GMAIL_USER}>`,
+      to: data.email,
+      subject: `⚽ ${emailTitle}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; background: #0f172a;">
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 30px; text-align: center;">
+            <h1 style="margin: 0; color: #fff; font-size: 28px;">⚽ SureOdds Analytics</h1>
+            <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">Your Free Daily Picks</p>
+          </div>
+          
+          <!-- Main Content -->
+          <div style="padding: 30px; color: #e2e8f0;">
+            <p style="font-size: 18px; margin: 0 0 20px 0;">
+              Hey <strong style="color: #60a5fa;">${firstName}</strong>! 👋
+            </p>
+            
+            <p style="font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
+              Here are your <strong style="color: #3b82f6;">FREE picks</strong> for today. Good luck! 🍀
+            </p>
+            
+            ${data.message ? `
+            <div style="background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 15px; margin: 0 0 25px 0; border-radius: 0 8px 8px 0;">
+              <p style="margin: 0; color: #60a5fa; font-size: 14px;">${data.message}</p>
+            </div>
+            ` : ''}
+            
+            <!-- Predictions Table -->
+            <div style="background: #1e293b; border-radius: 12px; overflow: hidden; border: 1px solid #334155;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: linear-gradient(135deg, #334155 0%, #1e293b 100%);">
+                    <th style="padding: 14px 16px; text-align: left; color: #fff; font-weight: 600; border-bottom: 2px solid #3b82f6;">Match</th>
+                    <th style="padding: 14px 16px; text-align: center; color: #fff; font-weight: 600; border-bottom: 2px solid #3b82f6;">Kickoff</th>
+                    <th style="padding: 14px 16px; text-align: center; color: #fff; font-weight: 600; border-bottom: 2px solid #3b82f6;">Tip</th>
+                    <th style="padding: 14px 16px; text-align: center; color: #fff; font-weight: 600; border-bottom: 2px solid #3b82f6;">Odds</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${oddsHtml}
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Upgrade CTA -->
+            <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 12px; padding: 25px; margin: 25px 0; text-align: center;">
+              <h3 style="color: #10b981; margin: 0 0 12px 0; font-size: 18px;">🔥 Want More Premium Picks?</h3>
+              <p style="color: #94a3b8; margin: 0 0 20px 0; font-size: 14px;">
+                Upgrade to VIP for exclusive high-confidence predictions, expert analysis, and higher winning rates!
+              </p>
+              <a href="${process.env.NEXTAUTH_URL || 'https://sureodds-analysis.vercel.app'}/pricing" 
+                 style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff; text-decoration: none; padding: 12px 30px; border-radius: 8px; font-weight: bold; font-size: 14px;">
+                🚀 Upgrade to VIP
+              </a>
+            </div>
+            
+            <!-- Tips -->
+            <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 20px; margin: 25px 0;">
+              <h3 style="color: #3b82f6; margin: 0 0 12px 0; font-size: 16px;">💡 Quick Tips</h3>
+              <ul style="margin: 0; padding-left: 20px; line-height: 1.8; color: #94a3b8; font-size: 14px;">
+                <li>Always bet responsibly within your limits</li>
+                <li>Consider using a staking plan for better bankroll management</li>
+                <li>Check team news before placing your bets</li>
+              </ul>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.NEXTAUTH_URL || 'https://sureodds-analysis.vercel.app'}/predictions" 
+                 style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #fff; text-decoration: none; padding: 14px 35px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                📊 View All Predictions
+              </a>
+            </div>
+            
+            <p style="font-size: 14px; color: #64748b; text-align: center; margin: 20px 0 0 0;">
+              Let's make today a winning day! 🏆
+            </p>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background: #020617; padding: 25px 30px; text-align: center; border-top: 1px solid #334155;">
+            <p style="color: #64748b; margin: 0 0 10px 0; font-size: 12px;">
+              You're receiving this because you signed up at SureOdds Analytics.
+            </p>
+            <p style="color: #475569; margin: 0; font-size: 11px;">
+              © ${new Date().getFullYear()} SureOdds Analytics. Bet responsibly. 18+ only.
+            </p>
+          </div>
+        </div>
+      `,
+      text: `
+⚽ ${emailTitle}
+
+Hey ${firstName}! 👋
+
+Here are your FREE picks for today. Good luck! 🍀
+
+${data.message ? `📢 ${data.message}\n\n` : ''}
+TODAY'S FREE PICKS
+==================
+
+${oddsText}
+
+🔥 WANT MORE PREMIUM PICKS?
+---------------------------
+Upgrade to VIP for exclusive high-confidence predictions, expert analysis, and higher winning rates!
+Visit: ${process.env.NEXTAUTH_URL || 'https://sureodds-analysis.vercel.app'}/pricing
+
+💡 QUICK TIPS
+-------------
+• Always bet responsibly within your limits
+• Consider using a staking plan for better bankroll management
+• Check team news before placing your bets
+
+View all predictions: ${process.env.NEXTAUTH_URL || 'https://sureodds-analysis.vercel.app'}/predictions
+
+Let's make today a winning day! 🏆
+
+Best regards,
+SureOdds Analytics Team
+
+---
+You're receiving this because you signed up at SureOdds Analytics.
+© ${new Date().getFullYear()} SureOdds Analytics. Bet responsibly. 18+ only.
+      `.trim(),
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('✅ Free picks email sent to:', data.email);
+
+  } catch (error) {
+    console.error('❌ Free picks email error:', error);
+    throw error; // Re-throw to handle in the API route
+  }
+}

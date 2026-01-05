@@ -16,7 +16,9 @@ import {
   Target,
   CheckSquare,
   Square,
-  RefreshCw
+  RefreshCw,
+  Gift,
+  Crown
 } from 'lucide-react';
 
 interface VipPrediction {
@@ -33,17 +35,20 @@ interface VipPrediction {
 interface Subscriber {
   email: string;
   name: string | null;
-  planType: string;
-  endDate: string;
+  planType?: string;
+  endDate?: string;
 }
+
+type SendType = 'free' | 'vip';
 
 export default function SendOddsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   
+  const [sendType, setSendType] = useState<SendType>('vip');
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
-  const [vipPredictions, setVipPredictions] = useState<VipPrediction[]>([]);
+  const [predictions, setPredictions] = useState<VipPrediction[]>([]);
   const [selectedPredictions, setSelectedPredictions] = useState<Set<string>>(new Set());
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [subscriberCount, setSubscriberCount] = useState(0);
@@ -66,17 +71,17 @@ export default function SendOddsPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [sendType]);
 
   const fetchData = async () => {
     try {
       setFetchingData(true);
-      const res = await fetch('/api/odds/send');
+      const res = await fetch(`/api/odds/send?type=${sendType}`);
       const data = await res.json();
       if (res.ok) {
         setSubscribers(data.subscribers || []);
         setSubscriberCount(data.count || 0);
-        setVipPredictions(data.predictions || []);
+        setPredictions(data.predictions || []);
         // Auto-select all pending predictions
         const pendingIds = (data.predictions || [])
           .filter((p: VipPrediction) => p.status === 'PENDING')
@@ -101,7 +106,7 @@ export default function SendOddsPage() {
   };
 
   const selectAll = () => {
-    const allIds = vipPredictions.map(p => p.id);
+    const allIds = predictions.map(p => p.id);
     setSelectedPredictions(new Set(allIds));
   };
 
@@ -113,7 +118,7 @@ export default function SendOddsPage() {
     e.preventDefault();
     
     // Get selected predictions
-    const selectedOdds = vipPredictions
+    const selectedOdds = predictions
       .filter(p => selectedPredictions.has(p.id))
       .map(p => ({
         match: p.match,
@@ -139,6 +144,7 @@ export default function SendOddsPage() {
           odds: selectedOdds,
           title,
           message,
+          sendType,
         }),
       });
 
@@ -189,32 +195,80 @@ export default function SendOddsPage() {
             <ArrowLeft size={20} className="text-slate-400" />
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-white">Send Daily Odds</h1>
-            <p className="text-slate-400">Send VIP predictions to all active subscribers</p>
+            <h1 className="text-3xl font-bold text-white">Send Predictions</h1>
+            <p className="text-slate-400">Send free picks to all users or VIP odds to subscribers</p>
           </div>
         </div>
 
+        {/* Send Type Tabs */}
+        <div className="flex gap-2 mb-6">
+          <button
+            type="button"
+            onClick={() => setSendType('free')}
+            className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-xl border-2 transition ${
+              sendType === 'free'
+                ? 'bg-blue-600/20 border-blue-500 text-blue-400'
+                : 'bg-dark-100 border-slate-700 text-slate-400 hover:border-slate-600'
+            }`}
+          >
+            <Gift size={24} />
+            <div className="text-left">
+              <div className="font-semibold">Free Picks</div>
+              <div className="text-xs opacity-80">Send to ALL users</div>
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSendType('vip')}
+            className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-xl border-2 transition ${
+              sendType === 'vip'
+                ? 'bg-amber-600/20 border-amber-500 text-amber-400'
+                : 'bg-dark-100 border-slate-700 text-slate-400 hover:border-slate-600'
+            }`}
+          >
+            <Crown size={24} />
+            <div className="text-left">
+              <div className="font-semibold">VIP Odds</div>
+              <div className="text-xs opacity-80">Paid subscribers only</div>
+            </div>
+          </button>
+        </div>
+
         {/* Subscriber Count Card */}
-        <div className="bg-gradient-to-r from-primary-600/20 to-amber-600/20 border border-primary-500/30 rounded-xl p-6 mb-8">
+        <div className={`rounded-xl p-6 mb-8 border ${
+          sendType === 'free' 
+            ? 'bg-gradient-to-r from-blue-600/20 to-cyan-600/20 border-blue-500/30'
+            : 'bg-gradient-to-r from-primary-600/20 to-amber-600/20 border-primary-500/30'
+        }`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary-500/20 rounded-xl flex items-center justify-center">
-                <Users className="text-primary-400" size={24} />
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                sendType === 'free' ? 'bg-blue-500/20' : 'bg-primary-500/20'
+              }`}>
+                <Users className={sendType === 'free' ? 'text-blue-400' : 'text-primary-400'} size={24} />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-white">Active Subscribers</h3>
-                <p className="text-slate-400 text-sm">These users will receive the odds</p>
+                <h3 className="text-lg font-semibold text-white">
+                  {sendType === 'free' ? 'All Users' : 'Active Subscribers'}
+                </h3>
+                <p className="text-slate-400 text-sm">
+                  {sendType === 'free' 
+                    ? 'Everyone with an email in the database' 
+                    : 'Users with active paid subscriptions'}
+                </p>
               </div>
             </div>
             <div className="text-right">
               {fetchingData ? (
-                <Loader2 className="w-6 h-6 animate-spin text-primary-500" />
+                <Loader2 className={`w-6 h-6 animate-spin ${sendType === 'free' ? 'text-blue-500' : 'text-primary-500'}`} />
               ) : (
                 <>
-                  <div className="text-4xl font-bold text-primary-400">{subscriberCount}</div>
+                  <div className={`text-4xl font-bold ${sendType === 'free' ? 'text-blue-400' : 'text-primary-400'}`}>
+                    {subscriberCount}
+                  </div>
                   <button
                     onClick={fetchData}
-                    className="text-xs text-slate-400 hover:text-primary-400 transition flex items-center gap-1"
+                    className={`text-xs hover:${sendType === 'free' ? 'text-blue-400' : 'text-primary-400'} text-slate-400 transition flex items-center gap-1`}
                   >
                     <RefreshCw size={12} />
                     Refresh
@@ -314,8 +368,8 @@ export default function SendOddsPage() {
           <div className="bg-dark-100 rounded-xl border border-slate-800 p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Target className="text-primary-500" size={20} />
-                VIP Predictions
+                <Target className={sendType === 'free' ? 'text-blue-500' : 'text-primary-500'} size={20} />
+                {sendType === 'free' ? 'Free Predictions' : 'VIP Predictions'}
                 <span className="text-sm font-normal text-slate-400">
                   ({selectedPredictions.size} selected)
                 </span>
@@ -324,7 +378,11 @@ export default function SendOddsPage() {
                 <button
                   type="button"
                   onClick={selectAll}
-                  className="px-3 py-1.5 text-xs bg-primary-600/20 hover:bg-primary-600/30 text-primary-400 rounded-lg transition"
+                  className={`px-3 py-1.5 text-xs rounded-lg transition ${
+                    sendType === 'free' 
+                      ? 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-400'
+                      : 'bg-primary-600/20 hover:bg-primary-600/30 text-primary-400'
+                  }`}
                 >
                   Select All
                 </button>
@@ -348,38 +406,48 @@ export default function SendOddsPage() {
 
             {fetchingData ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+                <Loader2 className={`w-8 h-8 animate-spin ${sendType === 'free' ? 'text-blue-500' : 'text-primary-500'}`} />
               </div>
-            ) : vipPredictions.length === 0 ? (
+            ) : predictions.length === 0 ? (
               <div className="text-center py-12">
                 <Target className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-                <p className="text-slate-400 mb-2">No VIP predictions found</p>
+                <p className="text-slate-400 mb-2">
+                  No {sendType === 'free' ? 'free' : 'VIP'} predictions found
+                </p>
                 <p className="text-slate-500 text-sm mb-4">
-                  Create VIP predictions in the Admin Panel first (mark them as Premium/VIP)
+                  {sendType === 'free' 
+                    ? 'Create free predictions in the Admin Panel first (non-premium predictions)'
+                    : 'Create VIP predictions in the Admin Panel first (mark them as Premium/VIP)'}
                 </p>
                 <Link
                   href="/admin"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-lg transition text-sm"
+                  className={`inline-flex items-center gap-2 px-4 py-2 text-white rounded-lg transition text-sm ${
+                    sendType === 'free' 
+                      ? 'bg-blue-600 hover:bg-blue-500'
+                      : 'bg-primary-600 hover:bg-primary-500'
+                  }`}
                 >
                   Go to Admin Panel
                 </Link>
               </div>
             ) : (
               <div className="space-y-3">
-                {vipPredictions.map((prediction) => (
+                {predictions.map((prediction) => (
                   <div 
                     key={prediction.id}
                     onClick={() => togglePrediction(prediction.id)}
                     className={`p-4 rounded-xl border cursor-pointer transition ${
                       selectedPredictions.has(prediction.id)
-                        ? 'bg-primary-600/10 border-primary-500/50'
+                        ? sendType === 'free'
+                          ? 'bg-blue-600/10 border-blue-500/50'
+                          : 'bg-primary-600/10 border-primary-500/50'
                         : 'bg-dark-200 border-slate-700 hover:border-slate-600'
                     }`}
                   >
                     <div className="flex items-start gap-3">
                       <div className="mt-1">
                         {selectedPredictions.has(prediction.id) ? (
-                          <CheckSquare className="text-primary-500" size={20} />
+                          <CheckSquare className={sendType === 'free' ? 'text-blue-500' : 'text-primary-500'} size={20} />
                         ) : (
                           <Square className="text-slate-500" size={20} />
                         )}
@@ -406,7 +474,11 @@ export default function SendOddsPage() {
                           </span>
                         </div>
                         <div className="flex items-center gap-3 mt-2">
-                          <span className="px-3 py-1 bg-primary-600/20 text-primary-400 rounded-lg text-sm font-medium">
+                          <span className={`px-3 py-1 rounded-lg text-sm font-medium ${
+                            sendType === 'free'
+                              ? 'bg-blue-600/20 text-blue-400'
+                              : 'bg-primary-600/20 text-primary-400'
+                          }`}>
                             {prediction.tip}
                           </span>
                           {prediction.odds && (
@@ -427,28 +499,34 @@ export default function SendOddsPage() {
           <button
             type="submit"
             disabled={loading || subscriberCount === 0 || selectedPredictions.size === 0}
-            className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-primary-600 to-amber-600 hover:from-primary-500 hover:to-amber-500 disabled:from-slate-700 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition text-lg"
+            className={`w-full flex items-center justify-center gap-3 px-6 py-4 disabled:from-slate-700 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition text-lg ${
+              sendType === 'free'
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500'
+                : 'bg-gradient-to-r from-primary-600 to-amber-600 hover:from-primary-500 hover:to-amber-500'
+            }`}
           >
             {loading ? (
               <>
                 <Loader2 className="animate-spin" size={24} />
-                Sending to {subscriberCount} subscriber(s)...
+                Sending to {subscriberCount} {sendType === 'free' ? 'user' : 'subscriber'}(s)...
               </>
             ) : (
               <>
                 <Send size={24} />
-                Send {selectedPredictions.size} Prediction{selectedPredictions.size !== 1 ? 's' : ''} to {subscriberCount} Subscriber{subscriberCount !== 1 ? 's' : ''}
+                Send {selectedPredictions.size} {sendType === 'free' ? 'Free Pick' : 'VIP Prediction'}{selectedPredictions.size !== 1 ? 's' : ''} to {subscriberCount} {sendType === 'free' ? 'User' : 'Subscriber'}{subscriberCount !== 1 ? 's' : ''}
               </>
             )}
           </button>
           
           {subscriberCount === 0 && !fetchingData && (
             <p className="text-center text-slate-400 mt-3 text-sm">
-              No active subscribers found. Create vouchers or wait for subscriptions.
+              {sendType === 'free' 
+                ? 'No users found in the database.'
+                : 'No active subscribers found. Create vouchers or wait for subscriptions.'}
             </p>
           )}
           
-          {selectedPredictions.size === 0 && vipPredictions.length > 0 && (
+          {selectedPredictions.size === 0 && predictions.length > 0 && (
             <p className="text-center text-slate-400 mt-3 text-sm">
               Select at least one prediction to send.
             </p>
